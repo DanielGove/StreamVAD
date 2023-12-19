@@ -7,7 +7,7 @@ import torch
 import wave
 
 
-# Hyper parameters
+# Configuration
 WINDOW_SIZE_MS = 800
 FRAME_SIZE_MS = 10
 WINDOW_SIZE_FRAMES = int(WINDOW_SIZE_MS / FRAME_SIZE_MS)
@@ -50,7 +50,7 @@ class StreamVAD:
 
             if len(window_buffer) == window_buffer.maxlen:
                 window_data = b''.join(window_buffer)
-                audio_tensor = torch.from_numpy(np.frombuffer(window_data, dtype=np.int16)).float()
+                audio_tensor = torch.from_numpy(np.frombuffer(window_data, dtype=np.int16).copy()).float()
                 audio_tensor = audio_tensor.unsqueeze(0)
 
                 # Get frame-level posteriors
@@ -81,10 +81,5 @@ class StreamVAD:
 
 
 if __name__ == "__main__":
-    # Usage Example
     vad_processor = StreamVAD(debug=False)
-    #num_segments = vad_processor.process_file('output.wav')
-    #print("Number of speech segments detected:", num_segments)
-
-    # For live stream, call vad_processor.process_stream() instead
     vad_processor.process_stream()

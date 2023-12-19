@@ -1,0 +1,4 @@
+/recordings/*
+/tmpdir/*
+/pretrained_model_checkpoints/*
+/audio/*

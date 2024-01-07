@@ -16,26 +16,24 @@ SPEECH_THRESHOLD = 0.7
 NOT_SPEECH_THRESHOLD = 0.4
 
 class StreamVAD:
-    def __init__(self, debug=False):
+    def __init__(self, yield_audio=False, save_wav=True, wav_location="recordings/", debug=False):
         self.vad = SpeechBrainVAD.from_hparams(source="speechbrain/vad-crdnn-libriparty", savedir="tmpdir")
         self.debug = debug
+        self.wav_location = wav_location
 
     def log(self, message):
         if self.debug:
             print(message)
 
-    def write_wave(self, path, audio):
-        with wave.open(path, 'wb') as wf:
+    def save_recording(self, recorded_frames, timestamp):
+        filename = self. wav_location + f"speech_{timestamp}.wav"
+        audio_data = b''.join(recorded_frames)
+        with wave.open(filename, 'wb') as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
             wf.setframerate(SAMPLE_RATE)
-            wf.writeframes(audio)
-        self.log(f"Audio file written: {path}")
-
-    def save_recording(self, recorded_frames, timestamp):
-        filename = f"recordings/speech_{timestamp}.wav"
-        audio_data = b''.join(recorded_frames)
-        self.write_wave(filename, audio_data)
+            wf.writeframes(audio_data)
+        self.log(f"Audio file written: {filename}")
 
     def process_stream(self):
         audio = pyaudio.PyAudio()
@@ -70,16 +68,22 @@ class StreamVAD:
 
                 if recording and is_not_speech:
                     self.log("End of speech detected")
-                    self.save_recording(recorded_frames, start_time)
+
+                    yield recorded_frames, start_time
+                    
                     recorded_frames = []
                     recording = False
 
+        # After possible breaking conditions
         stream.stop_stream()
         stream.close()
         audio.terminate()
 
-
+    # Save the recordings to wave files
+    def record_speech(self):
+        for recorded_frames, start_time in self.process_stream():
+            self.save_recording(recorded_frames, start_time)
 
 if __name__ == "__main__":
-    vad_processor = StreamVAD(debug=False)
-    vad_processor.process_stream()
+    vad_processor = StreamVAD(debug=True)
+    vad_processor.record_speech()

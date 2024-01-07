@@ -23,6 +23,7 @@ class StreamVAD:
         self.debug = debug
         self.wav_location = wav_location
         self.audio_queue = deque()
+        self._STOP = False
 
     def log(self, message):
         if self.debug:
@@ -46,6 +47,9 @@ class StreamVAD:
         recorded_frames = []
         
         while True:
+            if self._STOP:
+                break
+
             frame = stream.read(320, exception_on_overflow=False)
             window_buffer.append(frame)
 
@@ -75,14 +79,19 @@ class StreamVAD:
                     recorded_frames = []
                     recording = False
 
-        # After possible breaking conditions
+        # After possible breaking conditions        
+        self.log("Stopping stream")
         stream.stop_stream()
         stream.close()
         audio.terminate()
     
     def start_stream(self):
+        # Add support for multiple streams?
         stream_thread = Thread(target=self.process_stream)
         stream_thread.start()
+    
+    def stop_stream(self):
+        self._STOP = True
 
     # Save the recordings to wave files
     def record_speech(self):
@@ -101,4 +110,6 @@ class StreamVAD:
 
 if __name__ == "__main__":
     vad_processor = StreamVAD(debug=True)
-    vad_processor.record_speech()
+    vad_processor.start_stream()
+    time.sleep(10)
+    vad_processor.stop_stream()

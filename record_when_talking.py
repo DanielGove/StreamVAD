@@ -1,9 +1,11 @@
 from speechbrain.pretrained import VAD as SpeechBrainVAD
 from collections import deque
+from threading import Thread
 import numpy as np
 import datetime
 import pyaudio
 import torch
+import time
 import wave
 
 
@@ -20,6 +22,7 @@ class StreamVAD:
         self.vad = SpeechBrainVAD.from_hparams(source="speechbrain/vad-crdnn-libriparty", savedir="tmpdir")
         self.debug = debug
         self.wav_location = wav_location
+        self.audio_queue = deque()
 
     def log(self, message):
         if self.debug:
@@ -68,9 +71,7 @@ class StreamVAD:
 
                 if recording and is_not_speech:
                     self.log("End of speech detected")
-
-                    yield recorded_frames, start_time
-                    
+                    self.audio_queue.append((recorded_frames, start_time))
                     recorded_frames = []
                     recording = False
 
@@ -78,11 +79,25 @@ class StreamVAD:
         stream.stop_stream()
         stream.close()
         audio.terminate()
+    
+    def start_stream(self):
+        stream_thread = Thread(target=self.process_stream)
+        stream_thread.start()
 
     # Save the recordings to wave files
     def record_speech(self):
-        for recorded_frames, start_time in self.process_stream():
+        self.start_stream()
+
+        for recorded_frames, start_time in self:
             self.save_recording(recorded_frames, start_time)
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        while not self.audio_queue:
+            time.sleep(0.1)
+        return self.audio_queue.popleft()
 
 if __name__ == "__main__":
     vad_processor = StreamVAD(debug=True)

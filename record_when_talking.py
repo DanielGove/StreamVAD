@@ -18,7 +18,7 @@ SPEECH_THRESHOLD = 0.7
 NOT_SPEECH_THRESHOLD = 0.4
 
 class StreamVAD:
-    def __init__(self, yield_audio=False, save_wav=True, wav_location="recordings/", debug=False):
+    def __init__(self, wav_location="recordings/", debug=False):
         self.vad = SpeechBrainVAD.from_hparams(source="speechbrain/vad-crdnn-libriparty", savedir="tmpdir")
         self.debug = debug
         self.wav_location = wav_location
